@@ -1,0 +1,1 @@
+{"id": "01", "nome": "Luis", "notas": {"linguagem_de_programacao": 10.0, "engenharia_de_software": 8.0, "algoritmos": 9.0, "estrutura_de_dados": 0.0}}
