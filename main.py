@@ -1,6 +1,7 @@
 from fastapi import FastAPI
 from pydantic import BaseModel
 import json
+from statistics import mean, median, stdev
 
 app = FastAPI()
 
@@ -21,27 +22,27 @@ alunos = {}
 def mensagem():
     return {"message": "Trabalho final de Python"}
 
-
 def carregar_alunos():
     arquivo = open('alunos.txt', 'r') 
     for linha in arquivo:
         aluno_dict = json.loads(linha) #converte cada linha do alunos.txt em um dicionario
         aluno_id = aluno_dict["id"]
-        alunos[aluno_id] = aluno_dict
+        notas = Notas(**aluno_dict["notas"])
+        aluno = Aluno(id=aluno_id, nome=aluno_dict["nome"], notas=notas)
+        alunos[aluno_id] = aluno
     arquivo.close()
-    return alunos
 
 carregar_alunos()
 
 @app.post("/")
 def adicionar_aluno(aluno: Aluno):
     if aluno.id in alunos:
-        return {"message": "Aluno com esse ID ja existe"}
+        return {"message": "Aluno com esse ID já existe"}
     notas = aluno.notas
     notas_dict = notas.__dict__
     for key, value in notas_dict.items():
         if not (0 <= value <= 10):
-           return {"message": "A nota de {key} deve estar entre 0 e 10"}
+            return {"message": f"A nota de {key} deve estar entre 0 e 10"}
         notas_dict[key] = round(value, 1)
 
     alunos[aluno.id] = aluno
@@ -63,5 +64,29 @@ def listar_alunos():
 @app.get("/alunos/{aluno_id}")
 def obter_aluno(aluno_id: str):
     if aluno_id not in alunos:
-        return {"message" : "Aluno nao encontrado"}
+        return {"message" : "Aluno não encontrado"}
     return alunos[aluno_id]
+
+@app.get("/estatisticas/{disciplina}") #exercicio extra 1
+def estatisticas_disciplina(disciplina: str):
+    notas_disciplina = []
+    for aluno in alunos.values():
+        if disciplina in aluno.notas.__dict__:
+            notas_disciplina.append(aluno.notas.__dict__[disciplina])
+    
+    if not notas_disciplina:
+        return {"message": "Disciplina não encontrada"}
+    
+    media = mean(notas_disciplina)
+    mediana = median(notas_disciplina)
+    if len(notas_disciplina) > 1:
+        desvio_padrao = stdev(notas_disciplina)
+    else:
+        desvio_padrao = 0.0 # o desvio padrão de apenas um dado sempre é 0
+    return {
+        "disciplina": disciplina,
+        "media": round(media, 2),
+        "mediana": round(mediana, 2),
+        "desvio_padrao": round(desvio_padrao, 2)
+    }
+
