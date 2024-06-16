@@ -2,6 +2,7 @@ from fastapi import FastAPI
 from pydantic import BaseModel
 import json
 from statistics import mean, median, stdev
+import os
 
 app = FastAPI()
 
@@ -23,14 +24,17 @@ def mensagem():
     return {"message": "Trabalho final de Python"}
 
 def carregar_alunos():
-    arquivo = open('alunos.txt', 'r') 
-    for linha in arquivo:
-        aluno_dict = json.loads(linha) #converte cada linha do alunos.txt em um dicionario
-        aluno_id = aluno_dict["id"]
-        notas = Notas(**aluno_dict["notas"])
-        aluno = Aluno(id=aluno_id, nome=aluno_dict["nome"], notas=notas)
-        alunos[aluno_id] = aluno
-    arquivo.close()
+    if not os.path.exists('alunos.txt'): # cria o arquivo se ele não existir
+        with open('alunos.txt', 'w') as arquivo:
+            pass
+    else:
+        with open('alunos.txt', 'r') as arquivo:
+            for linha in arquivo:
+                aluno_dict = json.loads(linha) # converte cada linha do alunos.txt em um dicionário
+                aluno_id = aluno_dict["id"]
+                notas = Notas(**aluno_dict["notas"])
+                aluno = Aluno(id=aluno_id, nome=aluno_dict["nome"], notas=notas)
+                alunos[aluno_id] = aluno
 
 carregar_alunos()
 
@@ -52,7 +56,7 @@ def adicionar_aluno(aluno: Aluno):
         "notas": notas_dict
     }
 
-    aluno_json = json.dumps(aluno_dict) #salva como json 
+    aluno_json = json.dumps(aluno_dict) # salva como json
     with open('alunos.txt', 'a') as file_out:
         file_out.write(aluno_json + "\n")
     return aluno
@@ -67,7 +71,8 @@ def obter_aluno(aluno_id: str):
         return {"message" : "Aluno não encontrado"}
     return alunos[aluno_id]
 
-@app.get("/estatisticas/{disciplina}") #exercicio extra 1
+
+@app.get("/estatisticas/{disciplina}") #exercicio extra 1 
 def estatisticas_disciplina(disciplina: str):
     notas_disciplina = []
     for aluno in alunos.values():
@@ -90,3 +95,16 @@ def estatisticas_disciplina(disciplina: str):
         "desvio_padrao": round(desvio_padrao, 2)
     }
 
+@app.get("/desempenho/abaixo-do-esperado") #exercicios extra 2
+def desempenho_abaixo(): 
+    alunos_abaixo = []
+    for aluno in alunos.values():
+        notas = aluno.notas.__dict__.values()
+        abaixo_do_esperado = False
+        for nota in notas:
+            if nota < 6.0:
+                abaixo_do_esperado = True
+                break
+        if abaixo_do_esperado:
+            alunos_abaixo.append(aluno)
+    return alunos_abaixo
